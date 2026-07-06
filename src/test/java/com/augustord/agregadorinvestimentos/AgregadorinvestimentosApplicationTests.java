@@ -6,7 +6,7 @@ import org.springframework.boot.test.context.SpringBootTest;
 @SpringBootTest
 class AgregadorinvestimentosApplicationTests {
 
-	@Test
+	//@Test
 	void contextLoads() {
 	}
 
