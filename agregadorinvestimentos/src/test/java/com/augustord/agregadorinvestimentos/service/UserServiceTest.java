@@ -6,8 +6,11 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
 
 import java.time.Instant;
 import java.util.List;
@@ -25,6 +28,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import com.augustord.agregadorinvestimentos.controller.CreateUserDto;
+import com.augustord.agregadorinvestimentos.controller.UpdateUserDto;
 import com.augustord.agregadorinvestimentos.model.User;
 import com.augustord.agregadorinvestimentos.repository.UserRepository;
 
@@ -144,4 +148,109 @@ public class UserServiceTest {
 
         }
     }
+    
+    @Nested
+    class updateUser{
+
+        @Test
+        @DisplayName("Should update user successfully when user exists")
+        void shouldUpdateUserSuccessfullyWhenUserExists(){
+            //arrange
+
+            var userId = UUID.randomUUID();
+            var user = new User(userId, "username", "email@example.com", "password", Instant.now(), null);
+            doReturn(Optional.of(user)).when(userRepository).findById(userId);
+            doReturn(user).when(userRepository).save(userArgumentCaptor.capture());
+
+            var updateUserDto = new UpdateUserDto("newUsername", "newPassword");
+
+            //act
+
+            userService.updateUser(user.getId().toString(), updateUserDto);
+
+            //assert
+            var userCaptured = userArgumentCaptor.getValue();
+
+            assertEquals(updateUserDto.username(), userCaptured.getUsername());
+            assertEquals(updateUserDto.password(), userCaptured.getPassword());
+
+            
+            verify(userRepository, times(1)).findById(userId);
+            verify(userRepository, times(1)).save(userCaptured);
+
+        }
+
+         @Test
+        @DisplayName("Should not update user when user not exists")
+        void shouldNotUpdateUserWhenUserNotExists() {
+
+            // Arrange
+            var updateUserDto = new UpdateUserDto(
+                    "newUsername",
+                    "newPassword"
+            );
+            var userId = UUID.randomUUID();
+            doReturn(Optional.empty())
+                    .when(userRepository)
+                    .findById(uuidArgumentCaptor.capture());
+
+            // Act
+            userService.updateUser(userId.toString(), updateUserDto);
+
+            // Assert
+            assertEquals(userId, uuidArgumentCaptor.getValue());
+
+            verify(userRepository, times(1))
+                    .findById(uuidArgumentCaptor.getValue());
+            verify(userRepository, times(0)).save(any());
+        }
+    }
+    
+
+
+    @Nested
+    class delete{
+
+        @Test
+        @DisplayName("Should delete user successfully when user exists")
+        void shouldDeleteUserSuccessfullyWhenUserExists(){
+            //arrange
+            var userId = UUID.randomUUID();
+            doReturn(true).when(userRepository).existsById(uuidArgumentCaptor.capture());
+
+            doNothing().when(userRepository).deleteById(uuidArgumentCaptor.capture());
+
+            //act
+            userService.deleteById(userId.toString());
+
+            //assert
+            var idList = uuidArgumentCaptor.getAllValues();
+        
+            assertEquals(userId, idList.get(0));
+            assertEquals(userId, idList.get(1));
+
+            verify(userRepository, times(1)).existsById(userId);
+            verify(userRepository, times(1)).deleteById(userId);
+
+        }
+
+        @Test
+        @DisplayName("Should not delete user when user does not exist")
+        void shouldNotDeleteUserWhenUserDoesNotExist(){
+            //arrange
+            var userId = UUID.randomUUID();
+            doReturn(false).when(userRepository).existsById(uuidArgumentCaptor.capture());
+
+            //act
+            userService.deleteById(userId.toString());
+
+            //assert
+            assertEquals(userId, uuidArgumentCaptor.getValue());
+
+            verify(userRepository, times(1)).existsById(userId);
+            verify(userRepository, times(0)).deleteById(any(UUID.class));
+
+
+    }
+}   
 }
